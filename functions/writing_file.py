@@ -1,0 +1,53 @@
+import os
+from google.genai import types
+
+
+def write_file(working_directory, file_path, content):
+    working_path = os.path.abspath(working_directory)
+    target_path = os.path.abspath(os.path.join(working_path, file_path))
+
+    # Path Traversal Validation (Security Check)
+    # Check if the absolute target path starts with the absolute working path.
+
+    if not target_path.startswith(working_path):
+        return (f'Error: Cannot write to "{file_path}" as the resulting path '
+                f'"{target_path}" is outside the permitted working directory "{working_path}"')
+    
+    if not os.path.exists(target_path):
+        try:
+            # Ensure the directory exists
+            os.makedirs(os.path.dirname(target_path), exist_ok=True)
+
+        except Exception as e:
+            return f'Error: Failed to create directories for "{file_path}": {str(e)}'
+        
+    if os.path.exists(target_path) and os.path.isdir(target_path):
+        return f'Error: "{file_path}" is a directory, cannot write file content to a directory'
+    
+    try:
+       with open(target_path, 'w') as file:
+            file.write(content)
+            return f'Successfully wrote to "{file_path}" ({len(content)} characters written)'
+            
+    except Exception as e:
+        return f'Error: Failed to write to "{file_path}": {str(e)}'
+
+
+schema_write_file = types.FunctionDeclaration(
+    name="write_file",
+    description="Writes content to a file within the working directory. Creates the file if it doesn't exist.",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "file_path": types.Schema(
+                type=types.Type.STRING,
+                description="Path to the file to write, relative to the working directory.",
+            ),
+            "content": types.Schema(
+                type=types.Type.STRING,
+                description="Content to write to the file",
+            ),
+        },
+        required=["file_path", "content"],
+    ),
+)
